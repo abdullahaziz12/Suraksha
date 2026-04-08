@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- GOOGLE SIGN-IN SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- JWT DECODE (For Google token parsing) -->
+  <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.js"></script>
+
+  <!-- OPENSTREETMAP LEAFLET -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- YOUR ENHANCED FEATURES -->
+  <script src="/enhanced-features.js"></script>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🛡️ Suraksha - Enhanced Safety Network</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      color: #E8274B;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: #666;
+      font-size: 1em;
+    }
+
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      border-left: 4px solid #667eea;
+    }
+
+    .section-title {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #googleSignInButton {
+      width: 100%;
+      margin-bottom: 15px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+      border: 2px solid #ddd;
+    }
+
+    .btn-secondary:hover {
+      background: #e8e8e8;
+    }
+
+    .btn-danger {
+      background: #E8274B;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #c71a3f;
+    }
+
+    #map {
+      width: 100%;
+      height: 300px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border: 2px solid #ddd;
+    }
+
+    .location-info {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .status-active {
+      background: #4cd964;
+      animation: pulse 2s infinite;
+    }
+
+    .status-inactive {
+      background: #999;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .alert {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 0.9em;
+    }
+
+    .alert-info {
+      background: #e3f2fd;
+      color: #1976d2;
+      border-left: 4px solid #1976d2;
+    }
+
+    .alert-success {
+      background: #e8f5e9;
+      color: #388e3c;
+      border-left: 4px solid #388e3c;
+    }
+
+    .alert-danger {
+      background: #ffebee;
+      color: #d32f2f;
+      border-left: 4px solid #d32f2f;
+    }
+
+    .sensor-status {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .sensor-item {
+      padding: 10px;
+      background: white;
+      border-radius: 6px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+
+    .sensor-item span {
+      display: block;
+      font-size: 0.8em;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .feature-list {
+      list-style: none;
+      font-size: 0.9em;
+    }
+
+    .feature-list li {
+      padding: 8px 0;
+      padding-left: 25px;
+      position: relative;
+      color: #555;
+    }
+
+    .feature-list li:before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #4cd964;
+      font-weight: bold;
+    }
+
+    .code-block {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+      }
+
+      .header h1 {
+        font-size: 2em;
+      }
+
+      .sensor-status {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- HEADER -->
+    <div class="header">
+      <h1>🛡️ Suraksha</h1>
+      <p>Enhanced Safety Network with Advanced Features</p>
+    </div>
+
+    <!-- GOOGLE AUTH SECTION -->
+    <div class="section">
+      <div class="section-title">🔐 Google Authentication</div>
+      <div id="googleSignInButton"></div>
+      <button class="btn-secondary" onclick="googleAuth.logout()">
+        Logout
+      </button>
+    </div>
+
+    <!-- GEOLOCATION SECTION -->
+    <div class="section">
+      <div class="section-title">
+        <span class="status-indicator status-inactive" id="locationStatus"></span>
+        📍 Real-Time Location
+      </div>
+
+      <button class="btn-primary" onclick="startLocationTracking()">
+        Start Location Tracking
+      </button>
+
+      <button class="btn-secondary" onclick="stopLocationTracking()">
+        Stop Tracking
+      </button>
+
+      <div id="map"></div>
+
+      <div class="location-info" id="locationInfo">
+        <strong>Status:</strong> Not tracking<br />
+        <strong>Latitude:</strong> - <br />
+        <strong>Longitude:</strong> - <br />
+        <strong>Accuracy:</strong> - <br />
+        <strong>Address:</strong> -
+      </div>
+    </div>
+
+    <!-- DEVICE SENSORS SECTION -->
+    <div class="section">
+      <div class="section-title">📱 Device Sensors</div>
+
+      <div class="alert alert-info">
+        <strong>ℹ️ Note:</strong> Sensors require mobile device (iOS 13+ or Android). Permission will be
+        requested automatically.
+      </div>
+
+      <button class="btn-primary" onclick="startSensorDetection()">
+        🤳 Enable Shake/Motion Detection
+      </button>
+
+      <button class="btn-secondary" onclick="stopSensorDetection()">
+        Stop Sensor Detection
+      </button>
+
+      <div class="sensor-status" style="margin-top: 15px">
+        <div class="sensor-item">
+          <strong>⏱️ Gyroscope</strong>
+          <span id="gyroscopeStatus">Inactive</span>
+        </div>
+        <div class="sensor-item">
+          <strong>🎯 Accelerometer</strong>
+          <span id="accelerometerStatus">Inactive</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 15px; padding: 10px; background: white; border-radius: 6px; font-size: 0.85em; border-left: 4px solid #ff9800">
+        <strong>⚠️ Power Button Detection:</strong><br />
+        <span style="color: #666">
+          On Android, fast tap the power button 2+ times to send emergency alert.<br />
+          Shake detection auto-alerts at intensity > 85%.
+        </span>
+      </div>
+    </div>
+
+    <!-- QUICK START SECTION -->
+    <div class="section">
+      <div class="section-title">🚀 Quick Setup</div>
+
+      <ol style="margin-left: 20px; color: #555; font-size: 0.9em">
+        <li>Get your Google OAuth Client ID from <a href="https://console.cloud.google.com" target="_blank">Google Cloud
+            Console</a></li>
+        <li>Update the Google Client ID in the initialization code</li>
+        <li>Or just click "Start Location Tracking" to test in browser</li>
+      </ol>
+
+      <div class="code-block" style="margin-top: 15px">
+// Initialize in your HTML:
+const suraksha = new WebSuraksha('1034517970038-if24homqfrlklemrr5vedet1rl60part.apps.googleusercontent.com');
+await suraksha.init({
+  googleButtonId: 'googleSignInButton',
+  mapContainerId: 'map',
+  enableSensors: true
+});</div>
+    </div>
+
+    <!-- FEATURES LIST -->
+    <div class="section">
+      <div class="section-title">✨ Features</div>
+      <ul class="feature-list">
+        <li>Google OAuth 2.0 authentication</li>
+        <li>Real-time GPS location tracking</li>
+        <li>OpenStreetMap integration</li>
+        <li>Gyroscope motion detection</li>
+        <li>Accelerometer fall detection</li>
+        <li>Power button double-tap SOS</li>
+        <li>Automatic emergency alerts</li>
+        <li>Trustee contact notifications</li>
+        <li>Location history tracking</li>
+        <li>Sensor event logging</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- INITIALIZATION SCRIPT -->
+  <script>
+    let geo, sensors, googleAuth;
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Initialize services
+      googleAuth = new SurakshEnhanced.GoogleAuthManager('1034517970038-if24homqfrlklemrr5vedet1rl60part.apps.googleusercontent.com');
+      geo = new SurakshEnhanced.GeolocationService();
+      sensors = new SurakshEnhanced.DeviceSensorsService();
+
+      // Initialize Google Auth (replace with your actual client ID)
+      const clientId = prompt(
+        'Enter your Google Client ID\n\n' +
+          'Get it from: https://console.cloud.google.com\n' +
+          'Leave blank to test without Google OAuth',
+        ''
+      );
+
+      if (clientId) {
+        googleAuth.clientId = clientId;
+        await googleAuth.init('googleSignInButton');
+      }
+
+      // Initialize map
+      // Get current location first
+      try {
+        const position = await geo.getCurrentPosition();
+        geo.initMap('map', position.latitude, position.longitude);
+      } catch (err) {
+        // Use default Lahore location
+        geo.initMap('map', 31.5204, 74.3587);
+      }
+
+      console.log('✅ Suraksha Enhanced ready!');
+    });
+
+    // LOCATION TRACKING
+    async function startLocationTracking() {
+      try {
+        const position = await geo.getCurrentPosition();
+        updateLocationUI(position);
+
+        // Continuous tracking
+        geo.watchLocation(updateLocationUI);
+      } catch (err) {
+        alert('Enable location permission in browser settings');
+        console.error(err);
+      }
+    }
+
+    function stopLocationTracking() {
+      geo.stopWatching();
+      document.getElementById('locationStatus').className = 'status-indicator status-inactive';
+    }
+
+    function updateLocationUI(position) {
+      document.getElementById('locationStatus').className = 'status-indicator status-active';
+
+      geo.reverseGeocode(position.latitude, position.longitude).then((address) => {
+        document.getElementById('locationInfo').innerHTML = `
+          <strong>Status:</strong> Tracking 📡<br />
+          <strong>Latitude:</strong> ${position.latitude.toFixed(6)}<br />
+          <strong>Longitude:</strong> ${position.longitude.toFixed(6)}<br />
+          <strong>Accuracy:</strong> ±${Math.round(position.accuracy)}m<br />
+          <strong>Address:</strong> ${address || 'Loading...'}
+        `;
+      });
+    }
+
+    // SENSOR DETECTION
+    async function startSensorDetection() {
+      // Check device type
+      const isMobile = /Android|iPhone|iPad|iPod/.test(navigator.userAgent);
+
+      if (!isMobile) {
+        alert('⚠️ Sensors available only on mobile devices.\n\nTesting on web with simulated data.');
+      }
+
+      const hasPermission = await sensors.requestSensorPermission();
+
+      if (hasPermission || !isMobile) {
+        sensors.startGyroscopeDetection((intensity) => {
+          document.getElementById('gyroscopeStatus').textContent = `Active (${Math.round(intensity)}%)`;
+        });
+
+        sensors.startPowerButtonDetection();
+
+        document.getElementById('accelerometerStatus').textContent = 'Active';
+        alert('✅ Sensors activated!\n\n- Shake to test motion detection\n- Double-tap power button for SOS');
+      } else {
+        alert('❌ Sensor permission denied');
+      }
+    }
+
+    function stopSensorDetection() {
+      sensors.stopGyroscopeDetection();
+      document.getElementById('gyroscopeStatus').textContent = 'Inactive';
+      document.getElementById('accelerometerStatus').textContent = 'Inactive';
+    }
+
+    // TEST SOS BUTTON
+    async function testSOS() {
+      try {
+        const position = await geo.getCurrentPosition();
+        await sensors.triggerEmergencyAlert('test');
+      } catch (err) {
+        console.error('Test SOS failed:', err);
+      }
+    }
+  </script>
+</body>
+</html>
