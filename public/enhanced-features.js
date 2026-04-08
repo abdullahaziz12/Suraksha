@@ -26,6 +26,17 @@ class GoogleAuthManager {
     this.onSuccess = null;
   }
 
+  async waitForGoogleSdk(timeoutMs = 12000) {
+    const start = Date.now();
+    while (!window.google?.accounts?.id) {
+      if (Date.now() - start > timeoutMs) {
+        return false;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    return true;
+  }
+
   /**
    * Initialize Google Sign-In
    * @param {string} clientId - Your Google OAuth 2.0 Client ID
@@ -35,7 +46,8 @@ class GoogleAuthManager {
    */
   async init(buttonId, options = {}) {
     try {
-      if (!window.google) {
+      const sdkReady = await this.waitForGoogleSdk();
+      if (!sdkReady) {
         console.error('Google Sign-In SDK not loaded');
         return false;
       }
@@ -53,7 +65,7 @@ class GoogleAuthManager {
       google.accounts.id.renderButton(document.getElementById(buttonId), {
         theme: 'outline',
         size: 'large',
-        width: '100%',
+        width: 320,
         text: 'signin_with'
       });
 
@@ -118,9 +130,12 @@ class GoogleAuthManager {
       }
 
       if (!result.ok || !data || data.success !== true) {
+        const looksLikeHtml = rawBody && rawBody.trim().startsWith('<!DOCTYPE');
         const apiMessage = data && data.error && data.error.message
           ? data.error.message
-          : (rawBody || 'Google login request failed');
+          : (looksLikeHtml
+            ? 'API endpoint not found. Set SURAKSHA_API_BASE to your Railway backend URL ending with /api and redeploy frontend.'
+            : (rawBody || 'Google login request failed'));
         alert('Login failed: ' + apiMessage);
         return;
       }
