@@ -1,11 +1,11 @@
 {
   "name": "suraksha",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Women's Safety Platform - Real-time protection with SOS alerts, safe ride tracking, and emergency contact management",
   "main": "server.js",
   "type": "commonjs",
   "engines": {
-    "node": ">=14.0.0",
+    "node": ">=18.0.0",
     "npm": ">=6.0.0"
   },
   "scripts": {
