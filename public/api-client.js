@@ -14,8 +14,11 @@
  */
 
 class SurakshAPI {
-  constructor(baseURL = '/api') {
-    this.baseURL = baseURL;
+  constructor(baseURL) {
+    const configuredBase = typeof window !== 'undefined' && typeof window.__surakshaApiBase === 'string'
+      ? window.__surakshaApiBase
+      : '/api';
+    this.baseURL = baseURL || configuredBase;
     this.token = localStorage.getItem('suraksha_token');
   }
 

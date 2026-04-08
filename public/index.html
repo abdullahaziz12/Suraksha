@@ -8,6 +8,22 @@
 <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/config.js"></script>
+<script>
+  (function configureApiBase() {
+    const rawBase = typeof window.SURAKSHA_API_BASE === 'string' ? window.SURAKSHA_API_BASE : '/api';
+    const normalizedBase = (rawBase || '/api').replace(/\/+$/, '') || '/api';
+    window.__surakshaApiBase = normalizedBase;
+
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = function patchedFetch(resource, init) {
+      if (typeof resource === 'string' && resource.startsWith('/api')) {
+        resource = `${window.__surakshaApiBase}${resource.slice(4)}`;
+      }
+      return nativeFetch(resource, init);
+    };
+  })();
+</script>
 <script src="/enhanced-features.js"></script>
 <style>
 /* ═══════════════════════════════════════
