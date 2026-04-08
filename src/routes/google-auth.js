@@ -14,6 +14,21 @@ const { findUserByEmail, findUserById, createUser, saveUser } = require('../repo
 // Note: In production, use 'google-auth-library' npm package
 // npm install google-auth-library
 
+function decodeGoogleTokenPayload(idToken) {
+  try {
+    if (!idToken || typeof idToken !== 'string') return null;
+    const parts = idToken.split('.');
+    if (parts.length < 2) return null;
+
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const json = Buffer.from(padded, 'base64').toString('utf8');
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * POST /api/google-auth/callback
  * Receives ID token from frontend (obtained via Google Sign-In SDK)
@@ -25,17 +40,21 @@ const { findUserByEmail, findUserById, createUser, saveUser } = require('../repo
  */
 router.post('/callback', asyncHandler(async (req, res) => {
   try {
-    const { idToken, userInfo } = req.body;
+    const { idToken, userInfo = {} } = req.body || {};
 
-    if (!idToken || !userInfo) {
-      throw new AuthError('Missing Google token or user info');
+    if (!idToken) {
+      throw new AuthError('Missing Google token');
     }
 
-    // Extract user info from Google (this comes from frontend)
-    const { email, name, picture } = userInfo;
+    const tokenPayload = decodeGoogleTokenPayload(idToken) || {};
+
+    // Extract from userInfo first, then fallback to idToken payload.
+    const email = String(userInfo.email || tokenPayload.email || '').trim().toLowerCase();
+    const name = String(userInfo.name || tokenPayload.name || '').trim();
+    const picture = userInfo.picture || tokenPayload.picture || null;
 
     if (!email || !name) {
-      throw new AuthError('Missing required user information from Google');
+      throw new AuthError('Unable to read Google account profile. Try again or use email login.');
     }
 
     // Check if user exists

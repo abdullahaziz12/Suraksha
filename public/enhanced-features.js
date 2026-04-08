@@ -75,7 +75,18 @@ class GoogleAuthManager {
    */
   async handleCredentialResponse(response) {
     try {
-      const decodedToken = jwt_decode(response.credential);
+      if (!response || !response.credential) {
+        alert('Login failed: missing Google credential');
+        return;
+      }
+
+      let decodedToken = {};
+      try {
+        decodedToken = jwt_decode(response.credential);
+      } catch (decodeError) {
+        // Continue with backend fallback decoding when client-side decode fails.
+        console.warn('[WARN] Failed to decode Google token on client:', decodeError.message);
+      }
 
       console.log('📊 Google User Info:', {
         email: decodedToken.email,
@@ -97,7 +108,22 @@ class GoogleAuthManager {
         })
       });
 
-      const data = await result.json();
+      const rawBody = await result.text();
+      let data = null;
+
+      try {
+        data = rawBody ? JSON.parse(rawBody) : null;
+      } catch (parseError) {
+        data = null;
+      }
+
+      if (!result.ok || !data || data.success !== true) {
+        const apiMessage = data && data.error && data.error.message
+          ? data.error.message
+          : (rawBody || 'Google login request failed');
+        alert('Login failed: ' + apiMessage);
+        return;
+      }
 
       if (data.success) {
         if (data.data?.requiresPhone) {
@@ -139,11 +165,11 @@ class GoogleAuthManager {
           this.onSuccess(data.data);
         }
       } else {
-        alert('Login failed: ' + data.error.message);
+        alert('Login failed: ' + (data.error?.message || 'Unknown Google login error'));
       }
     } catch (err) {
       console.error('[ERROR] Google auth response handling failed:', err);
-      alert('Login failed');
+      alert('Login failed: ' + (err.message || 'Unexpected error'));
     }
   }
 
